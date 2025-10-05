@@ -107,4 +107,13 @@
         name: tomcat
         state: started
         enabled: yes
+          
+    - name: Verify Tomcat service is running
+      ansible.builtin.systemd:
+        name: tomcat
+        state: started
+      register: tomcat_status
+
+    - debug:
+        msg: "Tomcat status: {{ tomcat_status }}"
 

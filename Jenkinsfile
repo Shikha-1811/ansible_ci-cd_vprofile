@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     tools {
-        jdk 'JDK17'   
-        maven 'Maven3.9' 
+        jdk 'JDK17'
+        maven 'Maven3.9'
     }
 
     stages {
@@ -22,7 +22,10 @@ pipeline {
         stage('Copy WAR to Tomcat Server') {
             steps {
                 sh '''
-                scp -i /home/ubuntu/frontend-backend.pem target/vprofile-v2.war ubuntu@172.31.17.16:/home/ubuntu/vprofile-project/target/vprofile-v2.war
+                echo "Copying WAR file to Tomcat server..."
+                scp -i /var/lib/jenkins/.ssh/frontend-backend.pem \
+                target/vprofile-v2.war \
+                ubuntu@172.31.17.16:/opt/tomcat/webapps/vprofile-v2.war
                 '''
             }
         }
@@ -30,22 +33,20 @@ pipeline {
         stage('Deploy with Ansible') {
             steps {
                 sh '''
+                echo "Running Ansible Playbook..."
                 ansible-playbook -i ~/ansible/inventory ~/ansible/site.yaml
                 '''
             }
         }
-
     }
-    
 
     post {
-    success {
-        echo 'Deployment successful!'
+        success {
+            echo 'Deployment successful!'
+        }
+        failure {
+            echo 'Deployment failed!'
+        }
     }
-    failure {
-        echo 'Deployment failed!'
-    }
-}
-
 }
 
