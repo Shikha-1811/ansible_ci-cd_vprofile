@@ -1,7 +1,7 @@
 ---
 - import_playbook: nginx.yaml
 - import_playbook: tomcat.yaml
-- import_playbook: db.yaml
+- import_playbook: db-mysql.yaml
 - import_playbook: rabbitmq.yaml
 - import_playbook: memcached.yaml
 
