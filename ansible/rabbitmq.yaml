@@ -1,0 +1,84 @@
+---
+- name: Install RabbitMQ
+  hosts: rm-mc
+  become: yes
+
+  tasks:
+    - name: Install dependencies for repository management
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+      loop:
+        - curl
+        - gnupg
+        - apt-transport-https
+
+    - name: Add Team RabbitMQ's main GPG key
+      ansible.builtin.shell:
+        cmd: "curl -1sLf \"https://keys.openpgp.org/vks/v1/by-fingerprint/0A9AF2115F4687BD29803A206B73A36E6026DFCA\" | gpg --dearmor | tee /usr/share/keyrings/com.rabbitmq.team.gpg > /dev/null"
+        creates: /usr/share/keyrings/com.rabbitmq.team.gpg
+
+    - name: Add RabbitMQ Erlang and Server repositories
+      ansible.builtin.apt_repository:
+        repo: "{{ item }}"
+        state: present
+        filename: rabbitmq
+      loop:
+        - "deb [signed-by=/usr/share/keyrings/com.rabbitmq.team.gpg] https://deb1.rabbitmq.com/rabbitmq-erlang/ubuntu/noble noble main"
+        - "deb [signed-by=/usr/share/keyrings/com.rabbitmq.team.gpg] https://deb1.rabbitmq.com/rabbitmq-server/ubuntu/noble noble main"
+
+    - name: Install Erlang packages required by RabbitMQ
+      ansible.builtin.apt:
+        name:
+          - erlang-base
+          - erlang-asn1
+          - erlang-crypto
+          - erlang-eldap
+          - erlang-ftp
+          - erlang-inets
+          - erlang-mnesia
+          - erlang-os-mon
+          - erlang-parsetools
+          - erlang-public-key
+          - erlang-runtime-tools
+          - erlang-snmp
+          - erlang-ssl
+          - erlang-syntax-tools
+          - erlang-tftp
+          - erlang-tools
+          - erlang-xmerl
+        state: present
+      
+    - name: Install Rabbitmq server
+      ansible.builtin.apt:
+        name: rabbitmq-server
+        state: present
+        update_cache: yes
+
+    - name: Enable Rabbitmq Management plugin
+      community.rabbitmq.rabbitmq_plugin:
+        names: rabbitmq_management
+        state: enabled
+      notify: Restart Rabbitmq service
+
+    - name: Ensure RabbitMQ service is started and enabled
+      ansible.builtin.systemd:
+        name: rabbitmq-server
+        state: started
+        enabled: yes
+
+    - name: Verify RabbitMQ service is running
+      ansible.builtin.shell: systemctl is-active rabbitmq-server
+      register: rabbitmq_status
+      changed_when: false
+
+    - debug:
+        msg: "RabbitMQ status: {{ rabbitmq_status.stdout }}"
+      
+  handlers:
+    - name: Restart Rabbitmq service
+      ansible.builtin.systemd:
+        name: rabbitmq-server
+        state: restarted
+

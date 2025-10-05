@@ -1,0 +1,48 @@
+---
+- name: Install and configure Nginx
+  hosts: app-web
+  become: yes
+
+  tasks:
+    - name: Update apt cache (Debian/Ubuntu)
+      ansible.builtin.apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Install Nginx package
+      ansible.builtin.package:
+        name: nginx
+        state: present
+
+    - name: Remove default NGINX configuration file
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Copy reverse proxy Nginx config
+      ansible.builtin.copy:
+        src: files/nginx-site.conf   # this file should exist in your Ansible repo under "files/"
+        dest: /etc/nginx/sites-available/nginx-site.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart Nginx
+      
+    - name: Create link
+      ansible.builtin.file:
+        src:  /etc/nginx/sites-available/nginx-site.conf
+        dest: /etc/nginx/sites-enabled/nginx-site.conf
+        state: link
+      notify: Restart Nginx
+
+    - name: Ensure Nginx service is running and enabled
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: yes
+
+  handlers:
+    - name: Restart Nginx
+      ansible.builtin.service:
+        name: nginx
+        state: restarted

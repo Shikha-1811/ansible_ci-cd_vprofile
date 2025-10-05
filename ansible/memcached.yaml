@@ -1,0 +1,17 @@
+---
+- name: Install Memcached
+  hosts: rm-mc
+  become: yes
+  
+  tasks:
+    - name: Install Memcached package
+      ansible.builtin.apt:
+        name: memcached
+        state: present
+        update_cache: yes
+
+    - name: started and enable mecached service
+      ansible.builtin.systemd:
+        name: memcached
+        state: started
+        enabled: yes      
