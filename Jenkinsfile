@@ -40,7 +40,7 @@ pipeline {
                 ansible-playbook -i ansible/inventory ansible/site.yaml --key-file /var/lib/jenkins/.ssh/frontend-backend.pem
 
                 echo "Running DB configuration..."
-                ansible-playbook -i ansible/inventory ansible/db.yaml --key-file /var/lib/jenkins/.ssh/db-mysql.pem
+                ansible-playbook -i ansible/inventory ansible/db-mysql.yaml --key-file /var/lib/jenkins/.ssh/db-mysql.pem
                 '''
             }
         }
