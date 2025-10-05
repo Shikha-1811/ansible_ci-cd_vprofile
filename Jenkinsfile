@@ -19,23 +19,27 @@ pipeline {
             }
         }
 
-        stage('Copy WAR to Tomcat Server') {
+        stage('Deploy WAR to Tomcat') {
             steps {
                 sh '''
-                echo "Copying WAR file to Tomcat server..."
-                scp -i /var/lib/jenkins/.ssh/frontend-backend.pem \
-                target/vprofile-v2.war \
-                ubuntu@172.31.17.16:/opt/tomcat/webapps/vprofile-v2.war
+                # Copy WAR to temporary folder on remote server
+                scp -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/frontend-backend.pem \
+                target/vprofile-v2.war ubuntu@172.31.17.16:/tmp/vprofile-v2.war
+
+                # Move WAR to Tomcat directory with sudo
+                ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/frontend-backend.pem \
+                ubuntu@172.31.17.16 "sudo mv /tmp/vprofile-v2.war /opt/tomcat/webapps/vprofile-v2.war"
+
+                # Restart Tomcat
+                ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/frontend-backend.pem \
+                ubuntu@172.31.17.16 "sudo systemctl restart tomcat"
                 '''
             }
         }
 
-        stage('Deploy with Ansible') {
+        stage('Run Ansible Playbook') {
             steps {
-                sh '''
-                echo "Running Ansible Playbook..."
-                ansible-playbook -i ~/ansible/inventory ~/ansible/site.yaml
-                '''
+                sh 'ansible-playbook -i ~/ansible/inventory ~/ansible/site.yaml'
             }
         }
     }
