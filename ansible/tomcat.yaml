@@ -74,14 +74,6 @@
         path: "{{ tomcat_install_dir }}/temp/tomcat.pid"
         state: absent
 
-    - name: put the artifact that create from maven build
-      ansible.builtin.copy:
-        src: /home/ubuntu/vprofile-project/target/vprofile-v2.war
-        dest: /usr/local/tomcat/webapps/ROOT.war
-        owner: "{{ tomcat_user }}"
-        group: "{{ tomcat_group }}"
-        mode: '0644'      
-
     - name: Create systemd service file for Tomcat
       ansible.builtin.copy:
         dest: "/etc/systemd/system/tomcat.service"
