@@ -22,34 +22,36 @@ pipeline {
         stage('Deploy WAR to Tomcat') {
             steps {
                 sh '''
-                # Copy WAR to temporary folder on remote server
+                echo "Copying WAR to Tomcat server..."
                 scp -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/frontend-backend.pem \
                 target/vprofile-v2.war ubuntu@172.31.17.16:/tmp/vprofile-v2.war
 
-                # Move WAR to Tomcat directory with sudo
+                echo "Moving WAR to Tomcat folder with sudo..."
                 ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/frontend-backend.pem \
-                ubuntu@172.31.17.16 "sudo mv /tmp/vprofile-v2.war /opt/tomcat/webapps/vprofile-v2.war"
-
-                # Restart Tomcat
-                ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/frontend-backend.pem \
-                ubuntu@172.31.17.16 "sudo systemctl restart tomcat"
+                ubuntu@172.31.17.16 "sudo mv /tmp/vprofile-v2.war /opt/tomcat/webapps/vprofile-v2.war && sudo systemctl restart tomcat"
                 '''
             }
         }
 
-        stage('Run Ansible Playbook') {
+        stage('Run Ansible Playbooks') {
             steps {
-                sh 'ansible-playbook -i ansible/inventory ansible/site.yaml'
+                sh '''
+                echo "Running Nginx & Tomcat configuration..."
+                ansible-playbook -i ansible/inventory ansible/site.yaml --key-file /var/lib/jenkins/.ssh/frontend-backend.pem
+
+                echo "Running DB configuration..."
+                ansible-playbook -i ansible/inventory ansible/db.yaml --key-file /var/lib/jenkins/.ssh/db-mysql.pem
+                '''
             }
         }
     }
 
     post {
         success {
-            echo 'Deployment successful!'
+            echo 'Deployment completed successfully!'
         }
         failure {
-            echo 'Deployment failed!'
+            echo 'Deployment failed. Check logs!'
         }
     }
 }
