@@ -70,7 +70,7 @@
 
     - name: Copy database backup to server
       ansible.builtin.copy:
-        src: db_backup.sql
+        src: ../src/main/resources/db_backup.sql
         dest: /tmp/db_backup.sql
         owner: root
         group: root
@@ -85,6 +85,7 @@
         state: import
         target: /tmp/db_backup.sql
       ignore_errors: true
+      failed_when: false
 
     - name: Remove temporary backup file
       ansible.builtin.file:
