@@ -54,7 +54,7 @@ The pipeline (`Jenkinsfile`) defines the full automation process:
 
 ## 📂 Repo Structure
 
-'''
+```
 ansible_ci-cd_vprofile/
 ├── ansible/
 │ ├── inventory # Server inventory
@@ -64,7 +64,7 @@ ansible_ci-cd_vprofile/
 ├── Jenkinsfile # CI/CD pipeline definition
 ├── pom.xml # Maven build config
 └── README.md
-'''
+```
 
 ---
 
