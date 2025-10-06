@@ -23,7 +23,7 @@ pipeline {
             steps {
                 sh '''
                 echo "Running Ansible playbooks to set up environment..."
-                ansible-playbook -i ansible/inventory ansible/site.yaml --key-file /var/lib/jenkins/.ssh/frontend-backend.pem
+                ansible-playbook -i ansible/inventory ansible/site.yaml --private-key /home/ubuntu/.ssh/frontend-backend.pem
                 '''
             }
         }
@@ -32,14 +32,14 @@ pipeline {
             steps {
                 sh '''
                 echo "Checking Tomcat status..."
-                ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/frontend-backend.pem \
+                ssh -o StrictHostKeyChecking=no -i /home/ubuntu/.ssh/frontend-backend.pem \
                 ubuntu@172.31.17.16 "sudo systemctl status tomcat || sudo systemctl start tomcat"
 
                 echo "Deploying WAR to Tomcat server..."
-                scp -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/frontend-backend.pem \
+                scp -o StrictHostKeyChecking=no -i /home/ubuntu/.ssh/frontend-backend.pem \
                 target/vprofile-v2.war ubuntu@172.31.17.16:/tmp/vprofile-v2.war
 
-                ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/frontend-backend.pem \
+                ssh -o StrictHostKeyChecking=no -i /home/ubuntu/.ssh/frontend-backend.pem \
                 ubuntu@172.31.17.16 "sudo mv /tmp/vprofile-v2.war /opt/tomcat/webapps/vprofile-v2.war && sudo systemctl restart tomcat"
                 '''
             }
