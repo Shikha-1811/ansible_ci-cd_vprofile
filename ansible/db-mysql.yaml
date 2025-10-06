@@ -1,6 +1,9 @@
-- name: Install and configure MariaDB
+- name: Install and Configure MariaDB
   hosts: db-mysql
   become: yes
+
+  vars:
+    mariadb_root_password: "vprodbpass"
 
   tasks:
     - name: Install MariaDB server
@@ -20,19 +23,22 @@
         state: started
         enabled: yes
 
-    - name: Set root password for MariaDB
+    - name: Set root password for MariaDB via Unix socket
       community.mysql.mysql_user:
         login_user: root
-        login_password: "vprodbpass"
+        login_password: "{{ mariadb_root_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
         user: root
         host_all: yes
-        password: "vprodbpass"
+        password: "{{ mariadb_root_password }}"
         state: present
+        check_implicit_admin: yes
 
     - name: Remove anonymous users
       community.mysql.mysql_user:
         login_user: root
-        login_password: "vprodbpass"
+        login_password: "{{ mariadb_root_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
         name: ''
         host_all: yes
         state: absent
@@ -40,21 +46,24 @@
     - name: Remove test database
       community.mysql.mysql_db:
         login_user: root
-        login_password: "vprodbpass"
+        login_password: "{{ mariadb_root_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
         name: test
         state: absent
 
     - name: Create application database
       community.mysql.mysql_db:
         login_user: root
-        login_password: "vprodbpass"
+        login_password: "{{ mariadb_root_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
         name: accounts
         state: present
 
     - name: Create application database user
       community.mysql.mysql_user:
         login_user: root
-        login_password: "vprodbpass"
+        login_password: "{{ mariadb_root_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
         name: root
         password: "admin123"
         priv: "accounts.*:ALL"
@@ -71,9 +80,7 @@
 
     - name: Restore database from backup
       ansible.builtin.shell: |
-        mysql -u root -p'vprodbpass' accounts < /tmp/db_backup.sql
-      args:
-        executable: /bin/bash
+        mysql -u root -p'{{ mariadb_root_password }}' accounts < /tmp/db_backup.sql
 
     - name: Remove temporary backup file
       ansible.builtin.file:
