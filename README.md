@@ -93,5 +93,5 @@ ansible_ci-cd_vprofile/
 
 ### Application Running
 ![Application Frontend](app_running.png)
-(app_running(2).png)
-(app_running(3).png
+(app_running (2).png)
+(app_running (3).png)
