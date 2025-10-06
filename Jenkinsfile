@@ -19,39 +19,39 @@ pipeline {
             }
         }
 
+        stage('Run Ansible Playbooks (Setup Servers)') {
+            steps {
+                sh '''
+                echo "Running Ansible playbooks to set up environment..."
+                ansible-playbook -i ansible/inventory ansible/site.yaml --key-file /var/lib/jenkins/.ssh/frontend-backend.pem
+                '''
+            }
+        }
+
         stage('Deploy WAR to Tomcat') {
             steps {
                 sh '''
-                echo "Copying WAR to Tomcat server..."
+                echo "Checking Tomcat status..."
+                ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/frontend-backend.pem \
+                ubuntu@172.31.17.16 "sudo systemctl status tomcat || sudo systemctl start tomcat"
+
+                echo "Deploying WAR to Tomcat server..."
                 scp -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/frontend-backend.pem \
                 target/vprofile-v2.war ubuntu@172.31.17.16:/tmp/vprofile-v2.war
 
-                echo "Moving WAR to Tomcat folder with sudo..."
                 ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/frontend-backend.pem \
                 ubuntu@172.31.17.16 "sudo mv /tmp/vprofile-v2.war /opt/tomcat/webapps/vprofile-v2.war && sudo systemctl restart tomcat"
                 '''
-            }
-        }
+               }
+         }
 
-        stage('Run Ansible Playbooks') {
-            steps {
-                sh '''
-                echo "Running Nginx & Tomcat configuration..."
-                ansible-playbook -i ansible/inventory ansible/site.yaml --key-file /var/lib/jenkins/.ssh/frontend-backend.pem
-
-                echo "Running DB configuration..."
-                ansible-playbook -i ansible/inventory ansible/db-mysql.yaml --key-file /var/lib/jenkins/.ssh/db-mysql.pem
-                '''
-            }
-        }
-    }
 
     post {
         success {
             echo 'Deployment completed successfully!'
         }
         failure {
-            echo 'Deployment failed. Check logs!'
+            echo 'Build or Deployment failed! Please check console output.'
         }
     }
 }
