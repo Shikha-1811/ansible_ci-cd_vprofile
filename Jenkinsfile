@@ -42,9 +42,9 @@ pipeline {
                 ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/frontend-backend.pem \
                 ubuntu@172.31.17.16 "sudo mv /tmp/vprofile-v2.war /opt/tomcat/webapps/vprofile-v2.war && sudo systemctl restart tomcat"
                 '''
-               }
-         }
-
+            }
+        }
+    }
 
     post {
         success {
