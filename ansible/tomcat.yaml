@@ -8,7 +8,7 @@
     tomcat_group: tomcat
     tomcat_home: /opt/tomcat
     tomcat_version: 9.0.109
-    war_source: /tmp/vprofile-v2.war
+    war_source: /var/lib/jenkins/workspace/ansible_ci-cd_vprofile/target/vprofile-v2.war
     war_dest: /opt/tomcat/webapps/vprofile-v2.war
 
   tasks:
@@ -87,14 +87,14 @@
         state: started
         enabled: yes
 
-    - name: Deploy WAR file
+    - name: Deploy WAR file from Jenkins workspace
       copy:
         src: "{{ war_source }}"
         dest: "{{ war_dest }}"
         owner: "{{ tomcat_user }}"
         group: "{{ tomcat_group }}"
         mode: '0644'
-        remote_src: yes
+        remote_src: no   # <--- Important: WAR is on controller
 
     - name: Restart Tomcat to deploy app
       systemd:

@@ -6,6 +6,10 @@ pipeline {
         maven 'Maven3.9'
     }
 
+    environment {
+        ANSIBLE_KEY = '/var/lib/jenkins/.ssh/frontend-backend.pem'
+    }
+
     stages {
         stage('Clone Repository') {
             steps {
@@ -19,36 +23,12 @@ pipeline {
             }
         }
 
-        stage('Run Ansible Playbooks (Setup Servers)') {
+        stage('Run Ansible Playbooks') {
             steps {
                 sh '''
-                echo "Running Ansible playbooks to set up environment..."
-                ansible-playbook -i ansible/inventory ansible/site.yaml --private-key /var/lib/jenkins/.ssh/frontend-backend.pem
+                echo "Running Ansible playbooks to set up servers and deploy WAR..."
+                ansible-playbook -i ansible/inventory ansible/site.yaml --private-key $ANSIBLE_KEY
                 '''
-            }
-        }
-
-        stage('Deploy WAR to Tomcat') {
-            steps {
-                script {
-                    def warFile = 'target/vprofile-v2.war'
-                    if (fileExists(warFile)) {
-                        sh '''
-                        echo "Checking Tomcat status..."
-                        ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/frontend-backend.pem \
-                        ubuntu@172.31.17.16 "sudo systemctl status tomcat || sudo systemctl start tomcat"
-
-                        echo "Deploying WAR to Tomcat server..."
-                        scp -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/frontend-backend.pem \
-                        target/vprofile-v2.war ubuntu@172.31.17.16:/tmp/vprofile-v2.war
-
-                        ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/frontend-backend.pem \
-                        ubuntu@172.31.17.16 "sudo mv /tmp/vprofile-v2.war /opt/tomcat/webapps/vprofile-v2.war && sudo systemctl restart tomcat"
-                        '''
-                    } else {
-                        error "WAR file ${warFile} not found. Build failed!"
-                    }
-                }
             }
         }
     }
@@ -58,7 +38,7 @@ pipeline {
             echo 'Deployment completed successfully!'
         }
         failure {
-            echo 'Build or Deployment failed! Check the console output.'
+            echo 'Build or Deployment failed! Check console output.'
         }
     }
 }
