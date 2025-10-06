@@ -1,12 +1,6 @@
-- name: Install MariaDB and restore database
+- name: Install and configure MariaDB
   hosts: db-mysql
   become: yes
-
-  vars:
-    mariadb_root_password: "vprodbpass"
-    db_name: accounts
-    db_user: root
-    db_password: "admin123"
 
   tasks:
     - name: Install MariaDB server
@@ -26,13 +20,13 @@
         state: started
         enabled: yes
 
-    - name: Set root password for MariaDB
+    - name: Set root password for MariaDB via Unix socket
       community.mysql.mysql_user:
         login_user: root
         login_unix_socket: /var/run/mysqld/mysqld.sock
         user: root
         host_all: yes
-        password: "{{ mariadb_root_password }}"
+        password: "vprodbpass"
         state: present
         check_implicit_admin: yes
 
@@ -51,40 +45,38 @@
         name: test
         state: absent
 
-    - name: Create application database
+    - name: Create application database 'accounts'
       community.mysql.mysql_db:
         login_user: root
         login_unix_socket: /var/run/mysqld/mysqld.sock
-        name: "{{ db_name }}"
+        name: accounts
         state: present
 
     - name: Create application database user
       community.mysql.mysql_user:
         login_user: root
         login_unix_socket: /var/run/mysqld/mysqld.sock
-        name: "{{ db_user }}"
-        password: "{{ db_password }}"
-        priv: "{{ db_name }}.*:ALL"
+        name: root
+        password: "admin123"
+        priv: "accounts.*:ALL"
         host: "%"
         state: present
 
-    - name: Copy database backup to DB server
+    - name: Copy database backup to remote server
       ansible.builtin.copy:
-        src: "files/db_backup.sql"
-        dest: "/tmp/db_backup.sql"
+        src: /home/ubuntu/vprofile-project/ansible/db_backup.sql
+        dest: /tmp/db_backup.sql
         owner: root
         group: root
         mode: '0644'
 
     - name: Restore database from backup
       ansible.builtin.shell: |
-        mysql -u root -p'{{ mariadb_root_password }}' {{ db_name }} < /tmp/db_backup.sql
-      args:
-        executable: /bin/bash
+        mysql -u root -p'vprodbpass' accounts < /tmp/db_backup.sql
 
     - name: Remove temporary backup file
       ansible.builtin.file:
-        path: "/tmp/db_backup.sql"
+        path: /tmp/db_backup.sql
         state: absent
 
     - name: Verify MariaDB service is running
