@@ -1,6 +1,12 @@
-- name: Install Mariadb and Restore Database
+- name: Install MariaDB and restore database
   hosts: db-mysql
   become: yes
+
+  vars:
+    mariadb_root_password: "vprodbpass"
+    db_name: accounts
+    db_user: root
+    db_password: "admin123"
 
   tasks:
     - name: Install MariaDB server
@@ -26,21 +32,45 @@
         login_unix_socket: /var/run/mysqld/mysqld.sock
         user: root
         host_all: yes
-        password: "vprodbpass"
+        password: "{{ mariadb_root_password }}"
         state: present
         check_implicit_admin: yes
 
-    - name: Create 'accounts' database
+    - name: Remove anonymous users
+      community.mysql.mysql_user:
+        login_user: root
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        name: ''
+        host_all: yes
+        state: absent
+
+    - name: Remove test database
       community.mysql.mysql_db:
         login_user: root
-        login_password: "vprodbpass"
         login_unix_socket: /var/run/mysqld/mysqld.sock
-        name: accounts
+        name: test
+        state: absent
+
+    - name: Create application database
+      community.mysql.mysql_db:
+        login_user: root
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        name: "{{ db_name }}"
+        state: present
+
+    - name: Create application database user
+      community.mysql.mysql_user:
+        login_user: root
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        name: "{{ db_user }}"
+        password: "{{ db_password }}"
+        priv: "{{ db_name }}.*:ALL"
+        host: "%"
         state: present
 
     - name: Copy database backup to DB server
       ansible.builtin.copy:
-        src: "/home/ubuntu/vprofile-project/ansible/db_backup.sql"
+        src: "files/db_backup.sql"
         dest: "/tmp/db_backup.sql"
         owner: root
         group: root
@@ -48,7 +78,7 @@
 
     - name: Restore database from backup
       ansible.builtin.shell: |
-        mysql -u root -p'vprodbpass' accounts < /tmp/db_backup.sql
+        mysql -u root -p'{{ mariadb_root_password }}' {{ db_name }} < /tmp/db_backup.sql
       args:
         executable: /bin/bash
 
