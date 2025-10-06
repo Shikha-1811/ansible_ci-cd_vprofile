@@ -89,7 +89,9 @@ ansible_ci-cd_vprofile/
 ## 📸 Screenshots
 
 ### Jenkins Pipeline Success
-![Jenkins Pipeline](jenkins_pipeline.png)
+![Jenkins Pipeline](jenkinspipeline.png)
 
 ### Application Running
-![Application Frontend](app_running.png)
+![Application Frontend](app_running1.png)
+(app_running (2).png)
+(app_running (3).png
