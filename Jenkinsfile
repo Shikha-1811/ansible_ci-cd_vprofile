@@ -19,32 +19,36 @@ pipeline {
             }
         }
 
-        stage('Copy WAR to App Server') {
-            steps {
-                sh '''
-                echo "Copying WAR file to app server..."
-                scp -o StrictHostKeyChecking=no -i /home/ubuntu/.ssh/frontend-backend.pem \
-                target/vprofile-v2.war ubuntu@172.31.17.16:/tmp/vprofile-v2.war
-                '''
-            }
-        }
-
         stage('Run Ansible Playbooks (Setup Servers)') {
             steps {
                 sh '''
                 echo "Running Ansible playbooks to set up environment..."
-                ansible-playbook -i ansible/inventory ansible/site.yaml --private-key /home/ubuntu/.ssh/frontend-backend.pem
+                ansible-playbook -i ansible/inventory ansible/site.yaml --private-key /var/lib/jenkins/.ssh/frontend-backend.pem
                 '''
             }
         }
 
-        stage('Restart Tomcat') {
+        stage('Deploy WAR to Tomcat') {
             steps {
-                sh '''
-                echo "Restarting Tomcat to deploy app..."
-                ssh -o StrictHostKeyChecking=no -i /home/ubuntu/.ssh/frontend-backend.pem \
-                ubuntu@172.31.17.16 "sudo systemctl restart tomcat"
-                '''
+                script {
+                    def warFile = 'target/vprofile-v2.war'
+                    if (fileExists(warFile)) {
+                        sh '''
+                        echo "Checking Tomcat status..."
+                        ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/frontend-backend.pem \
+                        ubuntu@172.31.17.16 "sudo systemctl status tomcat || sudo systemctl start tomcat"
+
+                        echo "Deploying WAR to Tomcat server..."
+                        scp -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/frontend-backend.pem \
+                        target/vprofile-v2.war ubuntu@172.31.17.16:/tmp/vprofile-v2.war
+
+                        ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/frontend-backend.pem \
+                        ubuntu@172.31.17.16 "sudo mv /tmp/vprofile-v2.war /opt/tomcat/webapps/vprofile-v2.war && sudo systemctl restart tomcat"
+                        '''
+                    } else {
+                        error "WAR file ${warFile} not found. Build failed!"
+                    }
+                }
             }
         }
     }
@@ -54,7 +58,7 @@ pipeline {
             echo 'Deployment completed successfully!'
         }
         failure {
-            echo 'Build or Deployment failed! Please check console output.'
+            echo 'Build or Deployment failed! Check the console output.'
         }
     }
 }
