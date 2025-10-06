@@ -92,6 +92,6 @@ ansible_ci-cd_vprofile/
 ![Jenkins Pipeline](jenkinspipeline.png)
 
 ### Application Running
-![App Frontend 1](app_running.png)
-![App Frontend 2](app_running (2).png)
-![App Frontend 3](app_running (3).png)
+![App Frontend 1](app_running_1.png)
+![App Frontend 2](app_running_2.png)
+![App Frontend 3](app_running_3.png)
