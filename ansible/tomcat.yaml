@@ -29,11 +29,16 @@
         url: "https://downloads.apache.org/tomcat/tomcat-9/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}.tar.gz"
         dest: /tmp/tomcat.tar.gz
 
-    - name: Remove existing Tomcat folder
+    - name: Check if Tomcat folder exists
+      stat:
+        path: "{{ tomcat_home }}"
+      register: tomcat_stat
+
+    - name: Remove existing Tomcat folder or symlink
       file:
         path: "{{ tomcat_home }}"
         state: absent
-        recurse: yes
+      when: tomcat_stat.stat.exists
 
     - name: Extract Tomcat
       unarchive:
@@ -43,6 +48,8 @@
 
     - name: Rename extracted folder to /opt/tomcat
       command: mv /opt/apache-tomcat-{{ tomcat_version }} "{{ tomcat_home }}"
+      args:
+        removes: /opt/apache-tomcat-{{ tomcat_version }}
 
     - name: Set ownership for Tomcat
       file:
