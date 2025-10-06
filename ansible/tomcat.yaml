@@ -18,7 +18,7 @@
 
     - name: Download Tomcat 9
       get_url:
-        url: https://downloads.apache.org/tomcat/tomcat-9/v9.0.92/bin/apache-tomcat-9.0.92.tar.gz
+        url: https://downloads.apache.org/tomcat/tomcat-9/v9.0.109/bin/apache-tomcat-9.0.109.tar.gz
         dest: /tmp/tomcat.tar.gz
 
     - name: Extract Tomcat
@@ -28,7 +28,7 @@
         remote_src: yes
 
     - name: Rename folder to /opt/tomcat
-      command: mv /opt/apache-tomcat-9.0.92 /opt/tomcat
+      command: mv /opt/apache-tomcat-9.0.109 /opt/tomcat
       args:
         removes: /opt/tomcat
 
