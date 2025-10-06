@@ -12,7 +12,7 @@
         state: present
         update_cache: yes
 
-    - name: Install PyMySQL (required for MySQL modules)
+    - name: Install PyMySQL
       ansible.builtin.apt:
         name: python3-pymysql
         state: present
@@ -23,18 +23,26 @@
         state: started
         enabled: yes
 
-    # Step 1: Set the root password using unix_socket
-    - name: Set root password via unix_socket
+    # ✅ Set root password ONLY via unix socket (first time)
+    - name: Set root password for MariaDB via unix_socket
       community.mysql.mysql_user:
         login_user: root
         login_unix_socket: /var/run/mysqld/mysqld.sock
-        user: root
-        host_all: yes
+        name: root
         password: "{{ mariadb_root_password }}"
+        host_all: true
+        check_implicit_admin: true
         state: present
-        check_implicit_admin: yes
+      ignore_errors: true   # prevents failure if already configured
 
-    # Step 2: Remove anonymous users
+    # ✅ Ensure root password login works afterwards
+    - name: Update root password login method
+      ansible.builtin.shell: |
+        mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '{{ mariadb_root_password }}';"
+      args:
+        executable: /bin/bash
+      ignore_errors: true
+
     - name: Remove anonymous users
       community.mysql.mysql_user:
         login_user: root
@@ -44,7 +52,6 @@
         host_all: yes
         state: absent
 
-    # Step 3: Remove test database
     - name: Remove test database
       community.mysql.mysql_db:
         login_user: root
@@ -53,7 +60,6 @@
         name: test
         state: absent
 
-    # Step 4: Create application database
     - name: Create application database
       community.mysql.mysql_db:
         login_user: root
@@ -62,27 +68,29 @@
         name: accounts
         state: present
 
-    # Step 5: Copy SQL file from repo to server
     - name: Copy database backup to server
       ansible.builtin.copy:
-        src: "{{ playbook_dir }}/../src/main/resources/db_backup.sql"
-        dest: "/tmp/db_backup.sql"
+        src: db_backup.sql
+        dest: /tmp/db_backup.sql
         owner: root
         group: root
         mode: '0644'
 
-    # Step 6: Import data into MariaDB
     - name: Restore database from backup
-      ansible.builtin.shell: |
-        mysql -u root -p'{{ mariadb_root_password }}' accounts < /tmp/db_backup.sql
+      community.mysql.mysql_db:
+        login_user: root
+        login_password: "{{ mariadb_root_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        name: accounts
+        state: import
+        target: /tmp/db_backup.sql
+      ignore_errors: true
 
-    # Step 7: Clean up temporary SQL file
     - name: Remove temporary backup file
       ansible.builtin.file:
         path: /tmp/db_backup.sql
         state: absent
 
-    # Step 8: Verify MariaDB service is active
     - name: Verify MariaDB service is running
       ansible.builtin.shell: systemctl is-active mariadb
       register: mariadb_status
