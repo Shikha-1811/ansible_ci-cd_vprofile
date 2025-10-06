@@ -1,119 +1,70 @@
 ---
-- name: Install Apache Tomcat on Ubuntu
+- name: Install and configure Tomcat 9
   hosts: app-web
   become: yes
-  vars:
-    tomcat_version: "10.1.46"
-    tomcat_major_version: "10"
-    tomcat_install_dir: "/opt/tomcat"
-    tomcat_user: "tomcat"
-    tomcat_group: "tomcat"
-    java_home: "/usr/lib/jvm/default-java"
 
   tasks:
-    - name: Update apt cache
-      ansible.builtin.apt:
+    - name: Install Java 17
+      apt:
+        name: openjdk-17-jdk
+        state: present
         update_cache: yes
 
-    - name: Install required packages (default-jdk, tar, gzip)
-      ansible.builtin.apt:
-        name:
-          - default-jdk  # This handles the creation of the default-java symlink
-          - tar
-          - gzip
-        state: present
-
-    - name: Create tomcat group
-      ansible.builtin.group:
-        name: "{{ tomcat_group }}"
-        state: present
-
-    - name: Create tomcat user
-      ansible.builtin.user:
-        name: "{{ tomcat_user }}"
-        group: "{{ tomcat_group }}"
-        home: "{{ tomcat_install_dir }}"
+    - name: Create Tomcat user
+      user:
+        name: tomcat
+        shell: /bin/false
         create_home: no
-        system: yes
-        shell: /usr/sbin/nologin
 
-    - name: Download Tomcat binary
-      ansible.builtin.get_url:
-        url: "https://dlcdn.apache.org/tomcat/tomcat-{{ tomcat_major_version }}/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}.tar.gz"
-        dest: "/tmp/apache-tomcat-{{ tomcat_version }}.tar.gz"
-        mode: '0644'
+    - name: Download Tomcat 9
+      get_url:
+        url: https://downloads.apache.org/tomcat/tomcat-9/v9.0.92/bin/apache-tomcat-9.0.92.tar.gz
+        dest: /tmp/tomcat.tar.gz
 
-    - name: Unarchive Tomcat
-      ansible.builtin.unarchive:
-        src: "/tmp/apache-tomcat-{{ tomcat_version }}.tar.gz"
-        dest: "/opt"
+    - name: Extract Tomcat
+      unarchive:
+        src: /tmp/tomcat.tar.gz
+        dest: /opt/
         remote_src: yes
-        owner: "{{ tomcat_user }}"
-        group: "{{ tomcat_group }}"
-        creates: "/opt/apache-tomcat-{{ tomcat_version }}"
 
-    - name: Create symbolic link for tomcat installation
-      ansible.builtin.file:
-        src: "/opt/apache-tomcat-{{ tomcat_version }}"
-        dest: "{{ tomcat_install_dir }}"
-        state: link
-        owner: "{{ tomcat_user }}"
-        group: "{{ tomcat_group }}"
-        force: yes
+    - name: Rename folder to /opt/tomcat
+      command: mv /opt/apache-tomcat-9.0.92 /opt/tomcat
+      args:
+        removes: /opt/tomcat
 
-    - name: Ensure correct ownership for tomcat directory
-      ansible.builtin.file:
-        path: "{{ tomcat_install_dir }}"
-        owner: "{{ tomcat_user }}"
-        group: "{{ tomcat_group }}"
+    - name: Change ownership
+      file:
+        path: /opt/tomcat
+        owner: tomcat
+        group: tomcat
         state: directory
         recurse: yes
 
-    - name: Clean up temporary files from previous failed runs
-      ansible.builtin.file:
-        path: "{{ tomcat_install_dir }}/temp/tomcat.pid"
-        state: absent
-
-    - name: Create systemd service file for Tomcat
-      ansible.builtin.copy:
-        dest: "/etc/systemd/system/tomcat.service"
+    - name: Create systemd service for Tomcat
+      copy:
+        dest: /etc/systemd/system/tomcat.service
         content: |
           [Unit]
-          Description=Apache Tomcat Web Application Container
+          Description=Apache Tomcat 9
           After=network.target
 
           [Service]
           Type=forking
-          User={{ tomcat_user }}
-          Group={{ tomcat_group }}
-          Environment="JAVA_HOME={{ java_home }}"
-          Environment="CATALINA_HOME={{ tomcat_install_dir }}"
-          Environment="CATALINA_BASE={{ tomcat_install_dir }}"
-          Environment="CATALINA_PID={{ tomcat_install_dir }}/temp/tomcat.pid"
-          ExecStart={{ tomcat_install_dir }}/bin/startup.sh
-          ExecStop={{ tomcat_install_dir }}/bin/shutdown.sh
-          RestartSec=10
+          User=tomcat
+          Group=tomcat
+          Environment="JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64"
+          Environment="CATALINA_HOME=/opt/tomcat"
+          ExecStart=/opt/tomcat/bin/startup.sh
+          ExecStop=/opt/tomcat/bin/shutdown.sh
           Restart=always
 
           [Install]
           WantedBy=multi-user.target
 
-    - name: Reload systemd daemon
-      ansible.builtin.systemd:
+    - name: Reload systemd and start Tomcat
+      systemd:
         daemon_reload: yes
-
-    - name: Start and enable Tomcat service
-      ansible.builtin.systemd:
         name: tomcat
         state: started
         enabled: yes
-          
-    - name: Verify Tomcat service is running
-      ansible.builtin.systemd:
-        name: tomcat
-        state: started
-      register: tomcat_status
-
-    - debug:
-        msg: "Tomcat status: {{ tomcat_status }}"
 
