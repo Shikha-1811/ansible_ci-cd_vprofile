@@ -23,7 +23,7 @@ pipeline {
             steps {
                 sh '''
                 echo "Running Ansible playbooks to set up environment..."
-                ansible-playbook -i ansible/inventory ansible/site.yaml --private-key /home/ubuntu/.ssh/frontend-backend.pem
+                ansible-playbook -i ansible/inventory ansible/site.yaml
                 '''
             }
         }
